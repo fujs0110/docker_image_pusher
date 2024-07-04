@@ -3,5 +3,7 @@
 #xhofe/alist:latest
 #支持指定架构
 #--platform=linux/arm64 xiaoyaliu/alist
-nginx:1.26.1
-mysql:8.0
+zabbix/zabbix-server-mysql:7.0-ubuntu-latest
+zabbix/zabbix-web-nginx-mysql:7.0-ubuntu-latest
+zabbix/zabbix-java-gateway:7.0-ubuntu-latest
+mysql:8.0.38-debian
