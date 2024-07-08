@@ -7,4 +7,5 @@
 #zabbix/zabbix-web-nginx-mysql:7.0-ubuntu-latest
 #zabbix/zabbix-java-gateway:7.0-ubuntu-latest
 #mysql:8.0.38-debian
-mrvautin/adminmongo
+#mrvautin/adminmongo
+elasticsearch:7.17.22
