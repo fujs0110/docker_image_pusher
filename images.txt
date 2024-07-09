@@ -9,4 +9,4 @@
 #mysql:8.0.38-debian
 #mrvautin/adminmongo
 #elasticsearch:7.17.22
-flashcatcloud/nightingale:latest
+flashcatcloud/categraf:latest
