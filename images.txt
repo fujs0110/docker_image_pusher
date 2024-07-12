@@ -9,4 +9,6 @@
 #mysql:8.0.38-debian
 #mrvautin/adminmongo
 #elasticsearch:7.17.22
-flashcatcloud/categraf:latest
+#flashcatcloud/categraf:latest
+prom/prometheus
+grafana/grafana
