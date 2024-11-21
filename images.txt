@@ -10,4 +10,4 @@ mysql:8.0
 #mrvautin/adminmongo
 #elasticsearch:7.17.22
 #flashcatcloud/categraf:latest
-
+redis:6.2.16-bookworm
