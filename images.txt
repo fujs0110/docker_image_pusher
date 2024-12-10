@@ -11,9 +11,9 @@ mysql:8.0
 #elasticsearch:7.17.22
 #flashcatcloud/categraf:latest
 #redis:6.2.16-bookworm
-docker pull openjdk:17-jdk-slim-bullseye
-docker pull openjdk:17-jdk-slim
-docker pull openjdk:17-jdk-alpine
-docker pull eclipse-temurin:17.0.13_11-jdk-alpine
-docker pull eclipse-temurin:17.0.13_11-jdk-noble
-docker pull eclipse-temurin:17.0.13_11-jdk-ubi9-minimal
+openjdk:17-jdk-slim-bullseye
+openjdk:17-jdk-slim
+openjdk:17-jdk-alpine
+eclipse-temurin:17.0.13_11-jdk-alpine
+eclipse-temurin:17.0.13_11-jdk-noble
+eclipse-temurin:17.0.13_11-jdk-ubi9-minimal
