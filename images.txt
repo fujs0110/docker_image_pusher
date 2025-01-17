@@ -17,4 +17,6 @@ mysql:8.0
 #eclipse-temurin:17.0.13_11-jdk-alpine
 #eclipse-temurin:17.0.13_11-jdk-noble
 #eclipse-temurin:17.0.13_11-jdk-ubi9-minimal
-openresty/openresty:1.27.1.1-bookworm-fat
+#openresty/openresty:1.27.1.1-bookworm-fat
+mysql:8.0.40-debian
+nacos/nacos-server:v2.4.3
