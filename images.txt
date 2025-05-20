@@ -10,7 +10,6 @@ mysql:8.0
 #mrvautin/adminmongo
 #elasticsearch:7.17.22
 #flashcatcloud/categraf:latest
-#redis:6.2.16-bookworm
 #openjdk:17-jdk-slim-bullseye
 #openjdk:17-jdk-slim
 #openjdk:17-jdk-alpine
@@ -35,3 +34,5 @@ mysql:8.0
 #zookeeper:3.4.13
 #pinpointdocker/pinpoint-flink:3.0.1
 debian:trixie-slim
+redis:6.2.18
+bitnami/kafka:2.7.0-debian-10-r124
