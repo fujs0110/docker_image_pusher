@@ -6,7 +6,7 @@
 #zabbix/zabbix-server-mysql:7.0-ubuntu-latest
 #zabbix/zabbix-web-nginx-mysql:7.0-ubuntu-latest
 #zabbix/zabbix-java-gateway:7.0-ubuntu-latest
-mysql:8.0
+#mysql:8.0
 #mrvautin/adminmongo
 #elasticsearch:7.17.22
 #flashcatcloud/categraf:latest
@@ -33,6 +33,7 @@ mysql:8.0
 #redis:7.0.14
 #zookeeper:3.4.13
 #pinpointdocker/pinpoint-flink:3.0.1
-debian:trixie-slim
-redis:6.2.18
-bitnami/kafka:2.7.0-debian-10-r124
+#debian:trixie-slim
+#redis:6.2.18
+#bitnami/kafka:2.7.0-debian-10-r124
+nginx:1.28.0-perl
