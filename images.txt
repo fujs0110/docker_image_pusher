@@ -37,4 +37,5 @@
 #redis:6.2.18
 #bitnami/kafka:2.7.0-debian-10-r124
 #nginx:1.28.0-perl
-apacheignite/ignite:2.16.0
+#apacheignite/ignite:2.16.0
+yeelabs/yearning:v3.1.9
