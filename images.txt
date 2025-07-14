@@ -40,4 +40,5 @@
 #apacheignite/ignite:2.16.0
 #yeelabs/yearning:v3.1.9
 #vimagick/cmak:latest
-eclipse-temurin:17-jdk-ubi9-minimal
+#eclipse-temurin:17-jdk-ubi9-minimal
+eclipse-temurin:17-jdk-alpine
