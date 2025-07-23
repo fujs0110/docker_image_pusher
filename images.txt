@@ -42,5 +42,4 @@
 #vimagick/cmak:latest
 #eclipse-temurin:17-jdk-ubi9-minimal
 #eclipse-temurin:17-jdk-alpine
-cgr.dev/chainguard/jdk:openjdk-17
-cgr.dev/chainguard/jadoptium-jdk:adoptium-openjdk-17
+eipwork/kuboard:v3
