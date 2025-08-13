@@ -47,6 +47,4 @@
 #redis:6.2.19
 #ongo:4.4.29-focal
 #gitlab/gitlab-ce:17.11.6-ce.0
-openresty/openresty:1.27.1.2-3-bookworm-fat
-openresty/openresty:1.25.3.2-bookworm-fat
-openresty:1.25.3.2-5-centos-amd64
+grafana/grafana:11.5.8
