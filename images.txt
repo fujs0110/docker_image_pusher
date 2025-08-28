@@ -47,4 +47,4 @@
 #redis:6.2.19
 #ongo:4.4.29-focal
 #gitlab/gitlab-ce:17.11.6-ce.0
-grafana/grafana:11.5.8
+eclipse-temurin:17.0.16_8-jdk-noble
