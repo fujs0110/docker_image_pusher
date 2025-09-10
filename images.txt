@@ -47,7 +47,4 @@
 #redis:6.2.19
 #ongo:4.4.29-focal
 #gitlab/gitlab-ce:17.11.6-ce.0
-azul/zulu-openjdk-centos:17.0.16-jdk
-azul/zulu-openjdk-debian:17.0.16-jdk
-azul/zulu-openjdk:17.0.16-jdk
-bellsoft/liberica-openjdk-debian:17.0.16-cds
+eclipse-temurin:17-jdk-ubi10-minimal
