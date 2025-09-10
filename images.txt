@@ -47,4 +47,4 @@
 #redis:6.2.19
 #ongo:4.4.29-focal
 #gitlab/gitlab-ce:17.11.6-ce.0
-eclipse-temurin:17-jre-noble
+eclipse-temurin:8u452-b09-jdk-noble
