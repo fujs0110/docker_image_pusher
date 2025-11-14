@@ -46,5 +46,4 @@
 #rabbitmq:3.8.33-management
 #redis:6.2.19
 #ongo:4.4.29-focal
-#gitlab/gitlab-ce:17.11.6-ce.0
-eclipse-temurin:8u462-b08-jdk-ubi10-minimal
+gitlab/gitlab-ce:14.10.2-ce.0
