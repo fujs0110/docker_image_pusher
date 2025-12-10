@@ -28,10 +28,8 @@
 #pinpointdocker/pinpoint-collector:3.0.1-metric
 #ubuntu/kafka:3.1-22.04_beta
 #apachepinot/pinot:1.0.0-11-amazoncorretto
-#zookeeper:3.8.0-temurin
 #telegraf:1.25.0
 #redis:7.0.14
-#zookeeper:3.4.13
 #pinpointdocker/pinpoint-flink:3.0.1
 #debian:trixie-slim
 #redis:6.2.18
@@ -46,4 +44,4 @@
 #rabbitmq:3.8.33-management
 #redis:6.2.19
 #ongo:4.4.29-focal
-postgres:16.11-trixie
+zookeeper:3.8
