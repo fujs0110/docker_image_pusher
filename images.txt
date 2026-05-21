@@ -35,4 +35,4 @@
 #rabbitmq:3.8.33-management
 #redis:6.2.19
 #ongo:4.4.29-focal
-postgres:14.20-bookworm
+nginx:1.30.1-perl
