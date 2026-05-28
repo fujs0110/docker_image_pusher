@@ -35,4 +35,4 @@
 #rabbitmq:3.8.33-management
 #redis:6.2.19
 #ongo:4.4.29-focal
-python:3.11
+nginx:1.30.2-perl
