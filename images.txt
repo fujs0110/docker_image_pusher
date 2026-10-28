@@ -35,4 +35,4 @@
 #redis:6.2.19
 #mongo:4.4.30-focal
 #mongodb/mongodb-community-server:4.4.31-ubuntu2204
-nginx:1.31.8-perl
+dockurr/samba:4.23
