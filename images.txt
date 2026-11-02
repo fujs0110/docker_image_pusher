@@ -34,7 +34,4 @@
 #rabbitmq:3.8.33-management
 #redis:6.2.19
 #mongo:4.4.30-focal
-#mongodb/mongodb-community-server:4.4.31-ubuntu2204
-eclipse-temurin:8u504-b01-jdk-noble
-eclipse-temurin:8u504-b01-jdk-ubi9-minimal
-eclipse-temurin:8u504-b01-jdk-alpine
+eclipse-temurin:17.0.16_8-jdk-ubi9-minimal
