@@ -33,9 +33,5 @@
 #rabbitmq:3.8.33-management
 #redis:6.2.19
 #mongo:4.4.30-focal
-eclipse-temurin:17.0.21_9-jdk-ubi10-minimal
-eclipse-temurin:17.0.21_9-jdk-ubi9-minimal
-eclipse-temurin:17.0.21_9-jdk-noble
-eclipse-temurin:17.0.21_9-jdk-alpine-3.23
-eclipse-temurin:8u504-b01-jdk-ubi9-minimal
-eclipse-temurin:8u504-b01-jdk-alpine-3.23
+openeuler/openeuler:24.03
+
