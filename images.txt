@@ -33,5 +33,5 @@
 #rabbitmq:3.8.33-management
 #redis:6.2.19
 #mongo:4.4.30-focal
-openeuler/openeuler:24.03
-
+prom/prometheus:v3.16.0
+prom/node-exporter:v1.12.1
