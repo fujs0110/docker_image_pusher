@@ -33,5 +33,4 @@
 #rabbitmq:3.8.33-management
 #redis:6.2.19
 #mongo:4.4.30-focal
-python:3.13.18-bookworm
 python:3.13.18-slim-bookworm
