@@ -40,16 +40,13 @@ jobs:
     # 2GB 根本不够用 —— 这正是 No space left on device 写到 Worker_*.log 的直接原因。
     - name: Maximize build space
       uses: easimon/maximize-build-space@v1
+      continue-on-error: true 
       with:
         root-reserve-mb: 30720
         swap-size-mb: 1024
         remove-dotnet: 'true'
         remove-haskell: 'true'
         # 镜像同步任务用不到这些预装工具链，全部清掉换空间
-        remove-android: 'true'
-        remove-codeql: 'true'
-        remove-swift: 'true'
-        remove-llvm: 'true'
         build-mount-path: '/var/lib/docker/'
 
     - name: Restart docker
