@@ -1,42 +1,55 @@
-name: Docker
+name: Docker Image Sync to Aliyun
 
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
 
+# 同一分支的同步任务串行执行：两个 job 并发往 /var/lib/docker 写镜像是磁盘写满的常见诱因
+concurrency:
+  group: docker-image-sync-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   ALIYUN_REGISTRY: "${{ secrets.ALIYUN_REGISTRY }}"
   ALIYUN_NAME_SPACE: "${{ secrets.ALIYUN_NAME_SPACE }}"
   ALIYUN_REGISTRY_USER: "${{ secrets.ALIYUN_REGISTRY_USER }}"
   ALIYUN_REGISTRY_PASSWORD: "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}"
+  # 磁盘水位低于该阈值(GB)就主动做一次垃圾回收
+  DISK_SAFE_GATE_GB: "8"
 
 jobs:
 
   build:
     name: Pull
     runs-on: ubuntu-latest
+    timeout-minutes: 330
     steps:
+
     - name: Before freeing up disk space
       run: |
         echo "Before freeing up disk space"
         echo "=============================================================================="
         df -hT
         echo "=============================================================================="
+        docker system df || true
 
-    # 增加可用磁盘空间
+    # 【关键修复 1】root-reserve-mb 由 2048 提到 30720。
+    # 原值 2048 表示"根分区只留 2GB，其余全部划给 /var/lib/docker"，
+    # 而 /home/runner（checkout 代码、runner 诊断日志 _diag、actions 缓存）都在根分区，
+    # 2GB 根本不够用 —— 这正是 No space left on device 写到 Worker_*.log 的直接原因。
     - name: Maximize build space
-      uses: easimon/maximize-build-space@master
+      uses: easimon/maximize-build-space@v1
       with:
-
         root-reserve-mb: 30720
         swap-size-mb: 1024
         remove-dotnet: 'true'
         remove-haskell: 'true'
-        # 如果空间还是不够用，可以把以下开启，清理出更多空间
-        # remove-android: 'true'
-        # remove-codeql: 'true'
+        # 镜像同步任务用不到这些预装工具链，全部清掉换空间
+        remove-android: 'true'
+        remove-codeql: 'true'
+        remove-swift: 'true'
+        remove-llvm: 'true'
         build-mount-path: '/var/lib/docker/'
 
     - name: Restart docker
@@ -48,110 +61,187 @@ jobs:
         echo "=============================================================================="
         df -hT
         echo "=============================================================================="
+        echo "docker data root: $(docker info --format '{{.DockerRootDir}}')"
 
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Docker Setup Buildx
-      uses: docker/setup-buildx-action@v3
+    # 【关键修复 2】移除了 docker/setup-buildx-action@v3。
+    # 本 job 只做 pull / tag / push，没有任何 build，不需要 buildx：
+    # setup-buildx 会创建 docker-container 驱动的 builder，
+    # 并额外拉取 moby/buildkit:buildx-stable-1 镜像（就是你截图卡住的那一步），
+    # 白占磁盘与时间。若日后确实要 build，请保留该步骤并加 driver: docker，
+    # 避免再拉 buildkit 镜像：
+    #   - name: Docker Setup Buildx
+    #     uses: docker/setup-buildx-action@v3
+    #     with:
+    #       driver: docker
 
     - name: Build and push image Aliyun
+      shell: bash
       run: |
-        docker login -u $ALIYUN_REGISTRY_USER -p $ALIYUN_REGISTRY_PASSWORD $ALIYUN_REGISTRY
-        # 数据预处理,判断镜像是否重名
+        set -uo pipefail
+
+        # ---------- 工具函数 ----------
+        # 网络类操作重试 3 次，避免单个镜像抖动导致整批中断
+        retry() {
+          local n=0 max=3
+          until "$@"; do
+            n=$((n+1))
+            if [ "$n" -ge "$max" ]; then
+              return 1
+            fi
+            echo "命令失败，${n}/${max} 重试: $*"
+            sleep $((n * 5))
+          done
+        }
+
+        # 打印指定挂载点可用空间(GB)
+        free_gb() {
+          df -BG --output=avail "$1" 2>/dev/null | tail -1 | tr -dc '0-9'
+        }
+
+        show_disk() {
+          echo "根分区可用: $(free_gb /)G    docker盘可用: $(free_gb /var/lib/docker)G"
+        }
+
+        # 阈值式垃圾回收：任一关键分区低于安全水位就立刻清一次
+        gc() {
+          local root docker_free
+          root=$(free_gb /)
+          docker_free=$(free_gb /var/lib/docker)
+          if [ -n "$root" ] && [ "$root" -lt "$DISK_SAFE_GATE_GB" ]; then
+            echo "!! 根分区可用 ${root}G 低于阈值，清理 runner 诊断日志与临时文件"
+            sudo rm -rf /home/runner/actions-runner/_diag/*.log 2>/dev/null || true
+            sudo journalctl --vacuum-size=200M 2>/dev/null || true
+          fi
+          if [ -n "$docker_free" ] && [ "$docker_free" -lt "$DISK_SAFE_GATE_GB" ]; then
+            echo "!! docker 盘可用 ${docker_free}G 低于阈值，清理悬空镜像与构建缓存"
+            docker image prune -f >/dev/null || true
+            docker builder prune -af >/dev/null || true
+          fi
+        }
+
+        # ---------- 登录（用 --password-stdin，避免密码出现在进程列表/日志里）----------
+        echo "$ALIYUN_REGISTRY_PASSWORD" | docker login \
+          -u "$ALIYUN_REGISTRY_USER" --password-stdin "$ALIYUN_REGISTRY"
+
+        # ---------- 第一遍扫描：检测重名镜像（同名不同命名空间需要加前缀区分）----------
         declare -A duplicate_images
         declare -A temp_map
         while IFS= read -r line || [ -n "$line" ]; do
-            # 忽略空行与注释
             [[ -z "$line" ]] && continue
             if echo "$line" | grep -q '^\s*#'; then
                 continue
             fi
-            
-            # 获取镜像的完整名称，例如kasmweb/nginx:1.25.3（命名空间/镜像名:版本号）
+
+            # 获取镜像的完整名称，例如 kasmweb/nginx:1.25.3
             image=$(echo "$line" | awk '{print $NF}')
-            # 将@sha256:等字符删除
+            # 将 @sha256: 等字符删除
             image="${image%%@*}"
             echo "image $image"
-            # 获取镜像名:版本号  例如nginx:1.25.3
+            # 获取 镜像名:版本号 例如 nginx:1.25.3
             image_name_tag=$(echo "$image" | awk -F'/' '{print $NF}')
-            echo "image_name_tag $image_name_tag"
-            # 获取命名空间 例如kasmweb,  这里有种特殊情况 docker.io/nginx，把docker.io当成命名空间，也OK
+            # 获取命名空间 例如 kasmweb（docker.io/nginx 把 docker.io 当命名空间）
+            # 【修复 3】这里不再拼接 "_"，保持原始值，空串就是"真的没有命名空间"
             name_space=$(echo "$image" | awk -F'/' '{if (NF==3) print $2; else if (NF==2) print $1; else print ""}')
             echo "name_space: $name_space"
-            # 这里不要是空值影响判断
-            name_space="${name_space}_"
-            # 获取镜像名例如nginx
+            # 获取镜像名例如 nginx
             image_name=$(echo "$image_name_tag" | awk -F':' '{print $1}')
             echo "image_name: $image_name"
-            
-            # 如果镜像存在于数组中，则添加temp_map
-            if [[ -n "${temp_map[$image_name]}" ]]; then
-                 # 如果temp_map已经存在镜像名，判断是不是同一命名空间
-                 if [[ "${temp_map[$image_name]}" != $name_space  ]]; then
+
+            if [[ -n "${temp_map[$image_name]:-}" ]]; then
+                 if [[ "${temp_map[$image_name]}" != "$name_space" ]]; then
                     echo "duplicate image name: $image_name"
                     duplicate_images[$image_name]="true"
                  fi
             else
-                # 存镜像的命名空间
-                temp_map[$image_name]=$name_space
-            fi       
+                temp_map[$image_name]="$name_space"
+            fi
         done < images.txt
-        
-        
+
+        # ---------- 第二遍：拉取 -> 重打标签 -> 推送 -> 立刻删除本地镜像 ----------
+        fail_list=()
+        idx=0
         while IFS= read -r line || [ -n "$line" ]; do
-            # 忽略空行与注释
             [[ -z "$line" ]] && continue
             if echo "$line" | grep -q '^\s*#'; then
                 continue
             fi
-        
-            echo "docker pull $line"
-            docker pull $line
+
+            idx=$((idx+1))
+            echo "=============================================================================="
+            echo "[$idx] docker pull $line"
+            echo "=============================================================================="
+
+            # 注意：$line 不能加引号，行内可能带 --platform=linux/arm64 参数，需要词分割
+            if ! retry docker pull $line; then
+                echo "::warning::拉取失败，跳过: $line"
+                fail_list+=("PULL FAIL: $line")
+                continue
+            fi
+
             platform=$(echo "$line" | awk -F'--platform[ =]' '{if (NF>1) print $2}' | awk '{print $1}')
             echo "platform is $platform"
-            # 如果存在架构信息 将架构信息拼到镜像名称前面
             if [ -z "$platform" ]; then
                 platform_prefix=""
             else
                 platform_prefix="${platform//\//_}_"
             fi
             echo "platform_prefix is $platform_prefix"
-            # 获取镜像的完整名称，例如kasmweb/nginx:1.25.3（命名空间/镜像名:版本号）
-            image=$(echo "$line" | awk '{print $NF}')
 
-            # 获取 镜像名:版本号  例如nginx:1.25.3
+            image=$(echo "$line" | awk '{print $NF}')
             image_name_tag=$(echo "$image" | awk -F'/' '{print $NF}')
-            # 获取命名空间 例如kasmweb  这里有种特殊情况 docker.io/nginx，把docker.io当成命名空间，也OK
             name_space=$(echo "$image" | awk -F'/' '{if (NF==3) print $2; else if (NF==2) print $1; else print ""}')
-            # 获取镜像名例  例如nginx
             image_name=$(echo "$image_name_tag" | awk -F':' '{print $1}')
-        
+
             name_space_prefix=""
-            # 如果镜像名重名
-            if [[ -n "${duplicate_images[$image_name]}" ]]; then
-               #如果命名空间非空，将命名空间加到前缀
-               if [[ -n "${name_space}" ]]; then
-                  name_space_prefix="${name_space}_"
-               fi
+            if [[ -n "${duplicate_images[$image_name]:-}" ]] && [[ -n "$name_space" ]]; then
+               name_space_prefix="${name_space}_"
             fi
-            
-            # 将@sha256:等字符删除
+
             image_name_tag="${image_name_tag%%@*}"
             new_image="$ALIYUN_REGISTRY/$ALIYUN_NAME_SPACE/$platform_prefix$name_space_prefix$image_name_tag"
+
             echo "docker tag $image $new_image"
-            docker tag $image $new_image
-            echo "docker push $new_image"
-            docker push $new_image
-            echo "开始清理磁盘空间"
-            echo "=============================================================================="
-            df -hT
-            echo "=============================================================================="
-            docker rmi $image
-            docker rmi $new_image
-            echo "磁盘空间清理完毕"
-            echo "=============================================================================="
-            df -hT
-            echo "=============================================================================="     
-            
+            docker tag "$image" "$new_image"
+
+            if ! retry docker push "$new_image"; then
+                echo "::warning::推送失败，跳过: $new_image"
+                fail_list+=("PUSH FAIL: $new_image")
+            fi
+
+            # 每个镜像处理完立刻释放本地空间（rmi 失败不阻断，可能被其它行复用）
+            docker rmi "$image" >/dev/null 2>&1 || true
+            docker rmi "$new_image" >/dev/null 2>&1 || true
+            docker image prune -f >/dev/null 2>&1 || true
+
+            show_disk
+            gc
+
+            # 每 10 个镜像做一次更彻底的回收，压住 buildkit/悬空层的增长
+            if [ $((idx % 10)) -eq 0 ]; then
+                echo "每 10 个镜像例行清理"
+                docker system prune -f >/dev/null 2>&1 || true
+                show_disk
+            fi
         done < images.txt
+
+        echo "=============================================================================="
+        df -hT
+        echo "=============================================================================="
+
+        if [ ${#fail_list[@]} -gt 0 ]; then
+            echo "::error::共 ${#fail_list[@]} 个镜像处理失败"
+            printf '%s\n' "${fail_list[@]}"
+            exit 1
+        fi
+
+    # 无论成败都收尾，避免残留把下一次运行的磁盘先吃掉
+    - name: Cleanup Docker (防止磁盘写满)
+      if: always()
+      run: |
+        docker system prune -af --volumes || true
+        docker builder prune -af || true
+        sudo rm -rf /home/runner/actions-runner/_diag/*.log 2>/dev/null || true
+        df -hT
