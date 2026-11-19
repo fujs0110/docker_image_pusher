@@ -33,4 +33,5 @@
 #rabbitmq:3.8.33-management
 #redis:6.2.19
 #mongo:4.4.30-focal
-python:3.13.18-bookworm
+nginx:1.30.7-perl
+nginx:1.31.9-perl
